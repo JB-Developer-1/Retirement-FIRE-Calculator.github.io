@@ -124,26 +124,31 @@ Modes are spending/goal lenses. Lean/Fat thresholds are modeled from your spendi
       <div><label>401(k) / 403(b)</label><div class="field currency"><span class="affix">$</span><input id="ret401" type="text" inputmode="decimal" value="10,000"></div></div>
     </div>
     <div class="row">
-      <div><label>IRA / Roth IRA</label><div class="field currency"><span class="affix">$</span><input id="ira" type="text" inputmode="decimal" value="10,000"></div></div>
-      <div><label>Cash / <span data-tip="HYSA: High-Yield Savings Account.
-Normal value: 4% to 5.5% APY." style="border-bottom:1px dotted #667085;cursor:help">HYSA</span></label><div class="field currency"><span class="affix">$</span><input id="cash" type="text" inputmode="decimal" value="10,000"></div></div>
+      <div><label><span data-tip="Pre-Tax Savings, tax paid on both principal and gains." style="border-bottom:1px dotted #667085;cursor:help">IRA</span></label><div class="field currency"><span class="affix">$</span><input id="ira" type="text" inputmode="decimal" value="10,000"></div></div>
+      <div><label><span data-tip="Post-Tax Savings, no taxes paid on principal or gains." style="border-bottom:1px dotted #667085;cursor:help">Roth IRA</span></label><div class="field currency"><span class="affix">$</span><input id="roth" type="text" inputmode="decimal" value="0"></div></div>
     </div>
-    <div class="total-box"><div class="k">TOTAL CURRENT INVESTMENTS</div><div class="v" id="totalInvest">$0</div><div class="s">Taxable + 401(k) + IRA + Cash, updates live</div></div>
+    <label>Cash / <span data-tip="HYSA: High-Yield Savings Account.
+Normal value: 4% to 5.5% APY." style="border-bottom:1px dotted #667085;cursor:help">HYSA</span></label><div class="field currency"><span class="affix">$</span><input id="cash" type="text" inputmode="decimal" value="10,000"></div>
+    <div class="total-box"><div class="k">TOTAL CURRENT INVESTMENTS</div><div class="v" id="totalInvest">$0</div><div class="s">Taxable + 401(k) + IRA + Roth IRA + Cash, updates live</div></div>
   </div>
   <div class="section"><h2>Savings & taxes</h2>
     <div class="row">
       <div><label>401(k) contribution / yr</label><div class="field currency"><span class="affix">$</span><input id="c401" type="text" inputmode="decimal" value="10,000"></div></div>
-      <div><label><span data-tip="IRA: Individual Retirement Account.
-Normal value: Up to $7,000/yr contribution limit." style="border-bottom:1px dotted #667085;cursor:help">IRA</span> contribution / yr</label><div class="field currency"><span class="affix">$</span><input id="cira" type="text" inputmode="decimal" value="0"></div></div>
+      <div><label><span data-tip="IRA: Individual Retirement Account. Pre-Tax Savings, tax paid on both principal and gains.
+Normal value: Up to $7,500/yr combined IRA + Roth IRA limit (2026)." style="border-bottom:1px dotted #667085;cursor:help">IRA</span> contribution / yr</label><div class="field currency"><span class="affix">$</span><input id="cira" type="text" inputmode="decimal" value="0"></div></div>
     </div>
-    <label>Taxable savings / yr</label><div class="field currency"><span class="affix">$</span><input id="ctax" type="text" inputmode="decimal" value="5,000"></div>
+    <div class="row">
+      <div><label><span data-tip="Roth IRA: Post-Tax Savings, no taxes paid on principal or gains.
+Normal value: Up to $7,500/yr combined IRA + Roth IRA limit (2026)." style="border-bottom:1px dotted #667085;cursor:help">Roth</span> contribution / yr</label><div class="field currency"><span class="affix">$</span><input id="croth" type="text" inputmode="decimal" value="0"></div></div>
+      <div><label>Taxable savings / yr</label><div class="field currency"><span class="affix">$</span><input id="ctax" type="text" inputmode="decimal" value="5,000"></div></div>
+    </div>
     <div class="row3">
       <div><label>Employer match</label><div class="field currency"><span class="affix">$</span><input id="match" type="text" inputmode="decimal" value="0"></div></div>
       <div><label>Income tax</label><div class="field percent"><input id="tax" type="text" inputmode="decimal" value="22"><span class="affix">%</span></div></div>
       <div><label><span data-tip="LTCG: Long-Term Capital Gains tax.
 Normal value: 0%, 15%, or 20% depending on taxable income brackets." style="border-bottom:1px dotted #667085;cursor:help">LTCG</span> tax</label><div class="field percent"><input id="ltcg" type="text" inputmode="decimal" value="15"><span class="affix">%</span></div></div>
     </div>
-    <div class="total-box"><div class="k">TOTAL ANNUAL SAVINGS</div><div class="v" id="totalSavings">$0</div><div class="s">401(k) + IRA + taxable + employer match</div></div>
+    <div class="total-box"><div class="k">TOTAL ANNUAL SAVINGS</div><div class="v" id="totalSavings">$0</div><div class="s">401(k) + IRA + Roth IRA + taxable + employer match</div></div>
   </div>
   <div class="section"><h2>Growth Assumptions and Additional Income</h2>
     <div class="row">
@@ -271,7 +276,7 @@ function formatWithCommas(input){
     input.setSelectionRange(pos,pos);
   }
 }
-const currencyIds=['income','spend','taxable','ret401','ira','cash','c401','cira','ctax','match','ss','addIncome'];
+const currencyIds=['income','spend','taxable','ret401','ira','roth','cash','c401','cira','croth','ctax','match','ss','addIncome'];
 const percentIds=['inflation','tax','ltcg','growth','retGrowth','swr','ssExpect'];
 currencyIds.forEach(id=>{
   const el=$(id);
@@ -337,8 +342,8 @@ $('saveBtn').addEventListener('click', (e) => {
 function numVal(id){ const raw=$(id).value.replace(/,/g,''); return parseFloat(raw)||0; }
 
 function updateTotals(){
-  const totalInvest = numVal('taxable')+numVal('ret401')+numVal('ira')+numVal('cash');
-  const totalSavings = numVal('c401')+numVal('cira')+numVal('ctax')+numVal('match');
+  const totalInvest = numVal('taxable')+numVal('ret401')+numVal('ira')+numVal('roth')+numVal('cash');
+  const totalSavings = numVal('c401')+numVal('cira')+numVal('croth')+numVal('ctax')+numVal('match');
   $('totalInvest').textContent = money(totalInvest);
   $('totalSavings').textContent = money(totalSavings);
 }
@@ -353,8 +358,8 @@ function vals(){
   let g=id=>numVal(id);
   let gi=id=>+$(id).value||0;
   return {age:gi('age'),retAge:gi('retAge'),income:g('income'),spend:g('spend'),infl:g('inflation')/100,
-    taxable:g('taxable'),r401:g('ret401'),ira:g('ira'),cash:g('cash'),
-    c401:g('c401'),cira:g('cira'),ctax:g('ctax'),match:g('match'),tax:g('tax')/100,ltcg:g('ltcg')/100,
+    taxable:g('taxable'),r401:g('ret401'),ira:g('ira'),roth:g('roth'),cash:g('cash'),
+    c401:g('c401'),cira:g('cira'),croth:g('croth'),ctax:g('ctax'),match:g('match'),tax:g('tax')/100,ltcg:g('ltcg')/100,
     growth:g('growth')/100,retGrowth:g('retGrowth')/100,ss:g('ss'),ssExpect:g('ssExpect')/100,ssAge:gi('ssAge'),
     addIncome:g('addIncome'),endAge:DEFAULT_END_AGE,swr:g('swr')/100};
 }
@@ -392,7 +397,9 @@ function calc(){
  const years = Math.min(maxYears, +slider.value);
 
  const retIndex=Math.max(0,Math.min(maxYears,v.retAge-v.age));
- let bal=v.taxable+v.r401+v.ira+v.cash, rows=[], reached=null;
+ // Account buckets: taxable+cash (growth taxed yearly at LTCG), 401(k)/IRA (pre-tax: withdrawals taxed as income), Roth (tax-free)
+ let bTax=v.taxable+v.cash, b401=v.r401, bIra=v.ira, bRoth=v.roth, rows=[], reached=null;
+ const keepRate=Math.max(0.01,1-v.tax);
  
  for(let i=0;i<=maxYears;i++){
    let age=v.age+i, retired=age>=v.retAge;
@@ -406,45 +413,62 @@ function calc(){
    let ssNominal = age>=v.ssAge ? v.ss * Math.pow(1+v.infl, i - (v.ssAge - v.age)) * v.ssExpect : 0;
    let ss=age>=v.ssAge?ssNominal:0;
    let addIncomeGross = retired ? v.addIncome * Math.pow(1+v.infl, i) : 0;
-   let contributions=retired?0:v.c401+v.cira+v.ctax+v.match;
-   
+   let contributions=retired?0:v.c401+v.cira+v.croth+v.ctax+v.match;
+
    let growthDollars = 0;
    let portfolioIncome = 0;
    let withdrawal = 0;
+   let withdrawalTax = 0;
+   let unfunded = 0;
    let estTaxes = 0;
-   let startBal = bal;
+   let startBal = bTax+b401+bIra+bRoth;
 
    if(i>0){
      let rate = retired ? v.retGrowth : v.growth;
+     let gTax=bTax*rate, g401=b401*rate, gIra=bIra*rate, gRoth=bRoth*rate;
+     growthDollars = gTax+g401+gIra+gRoth;
      if(!retired){
-       growthDollars = startBal * rate;
-       bal = startBal + growthDollars + contributions;
+       bTax += gTax + v.ctax;
+       b401 += g401 + v.c401 + v.match;
+       bIra += gIra + v.cira;
+       bRoth += gRoth + v.croth;
        estTaxes = income * v.tax;
      } else {
-       growthDollars = startBal * rate;
+       // Only growth in taxable/cash is taxed each year; 401(k)/IRA growth is taxed when withdrawn, Roth never
+       let growthTax = gTax * v.ltcg;
+       bTax += gTax - growthTax; b401 += g401; bIra += gIra; bRoth += gRoth;
        let addIncomeTax = addIncomeGross * v.tax;
        let addIncomeNet = addIncomeGross - addIncomeTax;
-       estTaxes = growthDollars * v.ltcg + addIncomeTax;
-       let netPortfolioIncome = growthDollars - (growthDollars * v.ltcg);
-       let totalAvailableIncome = netPortfolioIncome + ss + addIncomeNet;
-       
-       if(totalAvailableIncome >= spending){
-         withdrawal = 0;
-         bal = startBal + netPortfolioIncome - (spending - ss - addIncomeNet);
+       let need = spending - ss - addIncomeNet;   // net cash still needed after Social Security & additional income
+       let grossDrawn = 0;
+       if(need <= 0){
+         bTax += -need;   // surplus income gets reinvested in taxable
        } else {
-         let shortfall = spending - totalAvailableIncome;
-         withdrawal = shortfall;
-         bal = startBal - withdrawal;
+         let remaining = need;
+         // 1) taxable/cash first (growth already taxed each year)
+         let take = Math.min(bTax, remaining); bTax -= take; remaining -= take; grossDrawn += take;
+         // 2) pre-tax accounts (401k, then IRA): gross up so the after-tax amount covers the need
+         let netFrom401 = Math.min(b401*keepRate, remaining), gross401 = netFrom401/keepRate;
+         b401 -= gross401; remaining -= netFrom401; grossDrawn += gross401; withdrawalTax += gross401 - netFrom401;
+         let netFromIra = Math.min(bIra*keepRate, remaining), grossIra = netFromIra/keepRate;
+         bIra -= grossIra; remaining -= netFromIra; grossDrawn += grossIra; withdrawalTax += grossIra - netFromIra;
+         // 3) Roth last (tax-free)
+         take = Math.min(bRoth, remaining); bRoth -= take; remaining -= take; grossDrawn += take;
+         unfunded = remaining;
        }
+       estTaxes = growthTax + addIncomeTax + withdrawalTax;
+       // "withdrawal" = principal drawn beyond what the year's after-tax growth already covers
+       withdrawal = Math.max(0, grossDrawn - (growthDollars - growthTax));
      }
    } else {
      estTaxes = income * v.tax;
    }
 
+   let bal = bTax+b401+bIra+bRoth;
    portfolioIncome = growthDollars;
    let swrNow = startBal > 0 ? withdrawal / startBal : 0;
-   
-   rows.push({age,bal,spending,income,ss,addIncome:addIncomeGross,contributions,withdrawal,swrNow,growthDollars,portfolioIncome,estTaxes,startBal,retired});
+
+   rows.push({age,bal,spending,income,ss,addIncome:addIncomeGross,contributions,withdrawal,swrNow,growthDollars,portfolioIncome,estTaxes,withdrawalTax,unfunded,startBal,retired});
    if(reached===null && bal>=goal) reached=age;
  }
  lastRows=rows; lastRetIndex=retIndex; lastSWR=v.swr;
@@ -471,8 +495,11 @@ function calc(){
    : `you have ${ssClause}`;
  const growthSentence = `At your selected ${retRetRate.toFixed(1)}% retirement return, ${growthClause} and ${secondPart}.`;
  
- const st=$('summary'); 
- st.innerHTML=`At age <b>${v.retAge}</b>, the model projects <b>${money(firstYearBal)}</b> in invested/cash assets. Retirement spending starts at about <b>${money(rows[retIndex].spending)}</b> nominally, based on ${basisNote}. ${growthSentence} Portfolio principal withdrawals only occur if these income sources (after taxes) are insufficient to cover living expenses.`;
+ const depletedRow = rows.find(r=>r.retired && r.unfunded>0.5);
+ const depletedNote = depletedRow ? ` <b style="color:var(--red)">Under these assumptions the portfolio runs out at age ${depletedRow.age}.</b>` : '';
+
+ const st=$('summary');
+ st.innerHTML=`At age <b>${v.retAge}</b>, the model projects <b>${money(firstYearBal)}</b> in invested/cash assets. Retirement spending starts at about <b>${money(rows[retIndex].spending)}</b> nominally, based on ${basisNote}. ${growthSentence} Portfolio principal withdrawals only occur if these income sources (after taxes) are insufficient to cover living expenses.${depletedNote}`;
 
  setupAgeSummaryDropdown(rows);
  renderFire(t,v); 
@@ -517,7 +544,8 @@ function updateAgeSummary(rows){
 Total = ${money(totalInflows)}`;
 
   const expensesTip = `Living Expenses: ${money(row.spending)}
-+ Taxes on income/gains: ${money(row.estTaxes)}
++ Taxes on income/gains: ${money(row.estTaxes - (row.withdrawalTax||0))}
++ Taxes on 401(k)/IRA withdrawals: ${money(row.withdrawalTax||0)}
 Total = ${money(totalExpensesAndTaxes)}`;
 
   const netTip = `Total Inflows: ${money(totalInflows)}
@@ -653,7 +681,10 @@ window.addEventListener('resize',calc);
 loadData();
 updateTotals();
 updateSpendLabel();
-updateSFAmountByAge();
+// Only auto-fill the Social Security amount if the user hasn't saved their own figure
+let hasSavedSS=false;
+try{ hasSavedSS = JSON.parse(localStorage.getItem(storageKey)||'{}').ss != null; }catch(e){}
+if(!hasSavedSS) updateSFAmountByAge();
 calc();
 </script>
 </body>
