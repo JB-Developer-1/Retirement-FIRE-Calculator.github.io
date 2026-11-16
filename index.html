@@ -105,7 +105,7 @@ Modes are spending/goal lenses. Lean/Fat thresholds are modeled from your spendi
       <button class="pill" data-fire="chubby" data-tip="Chubby FIRE: a comfortable retirement above standard FIRE — modeled at about 125% of your current spending.">CHUBBY</button>
       <button class="pill" data-fire="fat" data-tip="Fat FIRE: a more comfortable, higher-spending retirement — modeled at about 150% of your current spending.">FAT</button>
       <button class="pill" data-fire="coast" data-tip="Coast FIRE: the amount you'd need saved right now so that growth alone — with no further contributions — reaches your full FIRE number by retirement age.">COAST</button>
-      <button class="pill" data-fire="barista" data-tip="Barista FIRE: part-time work covering part of your expenses, based on the amount you enter in Additional Annual Income After Retirement.">BARISTA</button>
+      <button class="pill" data-fire="barista" data-tip="Barista FIRE: part-time work covering part of your expenses, based on the pre-tax amount you enter in Additional Annual Income After Retirement.">BARISTA</button>
     </div>
   </div>
   <div class="section"><h2>Profile</h2>
@@ -173,7 +173,7 @@ Normal value: 0%, 15%, or 20% depending on taxable income brackets." style="bord
       <div><label style="white-space:nowrap"><span data-tip="SWR: Safe Withdrawal Rate.
 Normal value: 3.5% to 4.5% based on the Trinity Study for 30+ year horizons." style="border-bottom:1px dotted #667085;cursor:help">SWR</span> rate</label><div class="field percent"><input id="swr" type="text" inputmode="decimal" value="4.5"><span class="affix">%</span></div></div>
     </div>
-    <label style="margin-top:10px">Additional Annual Income After Retirement <span data-tip="Income from jobs, pensions, military retirement, etc." style="display:inline-block;cursor:help;border-bottom:1px dashed #b6bfcf;font-weight:700;color:#8792a3">ⓘ</span></label>
+    <label style="margin-top:10px">Additional Annual Income After Retirement (pre-tax) <span data-tip="Pre-tax income from jobs, pensions, military retirement, etc. Enter the amount before taxes; it is taxed at your income tax rate in all calculations." style="display:inline-block;cursor:help;border-bottom:1px dashed #b6bfcf;font-weight:700;color:#8792a3">ⓘ</span></label>
     <div class="field currency"><span class="affix">$</span><input id="addIncome" type="text" inputmode="decimal" value="0"></div>
   </div>
   <div class="section">
@@ -364,12 +364,19 @@ function vals(){
     addIncome:g('addIncome'),endAge:DEFAULT_END_AGE,swr:g('swr')/100};
 }
 function targets(v){
-  let s=v.spend, swr=v.swr||0.0001;
-  let standard=s/swr;
+  let swr=v.swr||0.0001;
   let yearsToRet=Math.max(0,v.retAge-v.age);
+  // Additional income is taxed at your income tax rate (same as the projection), so only the after-tax amount offsets spending.
+  // Everything here is in today's dollars, matching the spending inputs.
+  const addNet = v.addIncome * (1 - v.tax);
+  // Spending the portfolio must fund = lens spending minus after-tax additional income (never below $0).
+  const gap = (spend)=>Math.max(0, spend - addNet);
+  let standard=gap(v.spend)/swr;
   let coast=standard/Math.pow(1+(v.growth||0),yearsToRet);
-  let baristaSpendingGap=Math.max(0, s - (v.addIncome * Math.pow(1+v.infl, yearsToRet)) - (v.age + yearsToRet >= v.ssAge ? v.ss * Math.pow(1+v.infl, yearsToRet - (v.ssAge - v.age)) : 0));
-  return {lean:s*.70/swr, standard, chubby:s*1.25/swr, fat:s*1.50/swr, coast, barista:baristaSpendingGap/swr};
+  // Barista also nets Social Security when it is already active at retirement age
+  const ssAtRet = (v.retAge >= v.ssAge) ? v.ss * v.ssExpect : 0;
+  let barista=Math.max(0, v.spend - addNet - ssAtRet)/swr;
+  return {lean:gap(v.spend*.70)/swr, standard, chubby:gap(v.spend*1.25)/swr, fat:gap(v.spend*1.50)/swr, coast, barista};
 }
 function validate(v){
   const msgs=[];
@@ -491,7 +498,7 @@ function calc(){
  const growthClause = `your portfolio generates <b>${money(firstYearReturnDollars)}</b> in growth/interest`;
  const ssClause = `<b>${money(ssAmountAtStart)}</b> in Social Security once you reach age ${v.ssAge}`;
  const secondPart = retYearAddIncome > 0
-   ? `you have <b>${money(retYearAddIncome)}</b> in additional income during retirement + ${ssClause}`
+   ? `you have <b>${money(retYearAddIncome)}</b> in pre-tax additional income during retirement + ${ssClause}`
    : `you have ${ssClause}`;
  const growthSentence = `At your selected ${retRetRate.toFixed(1)}% retirement return, ${growthClause} and ${secondPart}.`;
  
@@ -539,12 +546,12 @@ function updateAgeSummary(rows){
   const inflowsTip = `Active Employment Income: ${money(row.income)}
 + Portfolio Growth/Interest: ${money(row.portfolioIncome)}
 + Social Security: ${money(row.ss)}
-+ Additional Income (jobs/pension): ${money(row.addIncome)}
++ Additional Income, pre-tax (jobs/pension): ${money(row.addIncome)}
 + Principal Withdrawal: ${money(row.withdrawal)}
 Total = ${money(totalInflows)}`;
 
   const expensesTip = `Living Expenses: ${money(row.spending)}
-+ Taxes on income/gains: ${money(row.estTaxes - (row.withdrawalTax||0))}
++ Taxes on income/gains (incl. additional income): ${money(row.estTaxes - (row.withdrawalTax||0))}
 + Taxes on 401(k)/IRA withdrawals: ${money(row.withdrawalTax||0)}
 Total = ${money(totalExpensesAndTaxes)}`;
 
@@ -569,11 +576,11 @@ $('horizonSlider').addEventListener('change',()=>{saveData();});
 function renderFire(t,v){
  const items=[
    ['LEAN','lean',t.lean,'70% of current spending','Lean FIRE: a minimal, tightly-budgeted retirement — modeled at about 70% of your current spending.'],
-   ['FIRE','standard',t.standard,'Current spending target','Standard FIRE: retire while maintaining your current spending level exactly as entered.'],
+   ['FIRE','standard',t.standard,'Current spending target, minus additional income (after income tax)','Standard FIRE: retire while maintaining your current spending level exactly as entered.'],
    ['CHUBBY','chubby',t.chubby,'125% of current spending','Chubby FIRE: a comfortable retirement above standard FIRE — modeled at about 125% of your current spending.'],
    ['FAT','fat',t.fat,'50% higher spending','Fat FIRE: a more comfortable, higher-spending retirement — modeled at about 150% of your current spending.'],
    ['COAST','coast',t.coast,'Needed today to coast to FIRE by '+v.retAge,"Coast FIRE: the amount you'd need saved right now so that growth alone — with no further contributions — reaches your full FIRE number by retirement age."],
-   ['BARISTA','barista',t.barista,'Portfolio covers spending minus SS & additional income','Barista FIRE: part-time work covering part of your expenses, based on the amount you enter in Additional Annual Income After Retirement.']
+   ['BARISTA','barista',t.barista,'Portfolio covers spending minus SS & additional income (after income tax)','Barista FIRE: part-time work covering part of your expenses, based on the pre-tax amount you enter in Additional Annual Income After Retirement.']
  ];
  $('firegrid').innerHTML=items.map(x=>`<div class="fire ${fireMode===x[1]?'active':''}" data-fire="${x[1]}" data-tip="${x[4]}"><strong>${x[0]}</strong><small>${x[3]}</small><div class="num">${x[2]?money(x[2]):'—'}</div></div>`).join('');
  document.querySelectorAll('#firegrid .fire').forEach(card=>card.onclick=()=>{
